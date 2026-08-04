@@ -89,17 +89,21 @@ pipeline {
         }
     }
 }
-        stage("Docker Scout Image") {
-            steps {
-                sh '''
-                        docker scout
-                        docker scout quickview prabhasrao/zomato:latest
-                        docker scout cves prabhasrao/zomato:latest
-                        docker scout recommendations prabhasrao/zomato:latest
-                   '''
-                    }
-                }
-
+        stage('Docker Scout Image') {
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'docker',
+            usernameVariable: 'DOCKER_USERNAME',
+            passwordVariable: 'DOCKER_PASSWORD'
+        )]) {
+            sh '''
+                echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                docker scout quickview prabhasrao/zomato:latest
+                docker logout
+            '''
+        }
+    }
+}
         stage("Deploy to Container") {
             steps {
                 sh '''
