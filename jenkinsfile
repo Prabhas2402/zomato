@@ -74,16 +74,21 @@ pipeline {
         }
 
         stage("Tag & Push to DockerHub") {
-            steps {
-                script {
-                    withDockerRegistry(credentialsId: 'docker') {
-                        sh "docker tag zomato prabhasrao/zomato:latest"
-                        sh "docker push prabhasrao/zomato:latest"
-                    }
-                }
-            }
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'docker',
+            usernameVariable: 'DOCKER_USERNAME',
+            passwordVariable: 'DOCKER_PASSWORD'
+        )]) {
+            sh '''
+                echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                docker tag zomato prabhasrao/zomato:latest
+                docker push prabhasrao/zomato:latest
+                docker logout
+            '''
         }
-
+    }
+}
         stage("Docker Scout Image") {
             steps {
                 script {
