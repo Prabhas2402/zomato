@@ -92,9 +92,10 @@ pipeline {
         stage("Docker Scout Image") {
             steps {
                 sh '''
-                        docker-scout quickview prabhasrao/zomato:latest
-                        docker-scout cves prabhasrao/zomato:latest
-                        docker-scout recommendations prabhasrao/zomato:latest
+                        docker scout
+                        docker scout quickview prabhasrao/zomato:latest
+                        docker scout cves prabhasrao/zomato:latest
+                        docker scout recommendations prabhasrao/zomato:latest
                    '''
                     }
                 }
