@@ -20,7 +20,7 @@ pipeline {
 
         stage("Git Checkout") {
             steps {
-                git 'https://github.com/Prabhas2402/prabhas.git'
+                git 'https://github.com/Prabhas2402/zomato.git'
             }
         }
 
