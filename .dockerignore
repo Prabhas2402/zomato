@@ -1,0 +1,7 @@
+node_modules
+.git
+dependency-check-report.xml
+dependency-check-report.html
+dependency-check-report.json
+.scannerwork
+coverage

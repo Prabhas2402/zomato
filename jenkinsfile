@@ -64,10 +64,10 @@ pipeline {
 }
 
         stage("Trivy File Scan") {
-            steps {
-                sh "trivy fs . > trivy.txt"
-            }
-        }
+    steps {
+        sh "trivy fs . --skip-files dependency-check-report.xml > trivy.txt"
+    }
+}
 
         stage("Build Docker Image") {
             steps {
