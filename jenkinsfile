@@ -99,27 +99,20 @@ pipeline {
         
         stage("Deploy to EC2") {
     steps {
-        withCredentials([
-            sshUserPrivateKey(
-                credentialsId: 'ec2-ssh',
-                keyFileVariable: 'SSH_KEY'
-            )
-        ]) {
-            sh '''
-                ssh -i "$SSH_KEY" \
-                    -o StrictHostKeyChecking=no \
-                    ec2-user@15.206.94.140 "
-                        docker pull prabhasrao/zomato:latest &&
-                        docker rm -f zomato || true &&
-                        docker run -d \
-                            --name zomato \
-                            -p 3000:3000 \
-                            prabhasrao/zomato:latest
-                    "
-            '''
-        }
+        sh '''
+            aws ssm send-command \
+              --instance-ids i-0d65376fe4cce32c6 \
+              --document-name "AWS-RunShellScript" \
+              --parameters 'commands=[
+                "docker pull prabhasrao/zomato:latest",
+                "docker rm -f zomato || true",
+                "docker run -d --name zomato -p 3000:3000 prabhasrao/zomato:latest"
+              ]' \
+              --region ap-south-1
+        '''
     }
 }
+
         stage("Deploy to EKS") {
             steps {
                 sh '''
