@@ -3,7 +3,6 @@ pipeline {
 
     tools {
         jdk 'jdk21'
-        nodejs 'node20'
     }
 
     environment {
@@ -42,32 +41,26 @@ pipeline {
             }
         }
 
-        stage("Install NPM Dependencies") {
+        stage("OWASP Dependency Check") {
             steps {
-                sh "npm install"
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    dependencyCheck(
+                        additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
+                        odcInstallation: 'DP-Check'
+                    )
+
+                    dependencyCheckPublisher(
+                        pattern: '**/dependency-check-report.xml'
+                    )
+                }
             }
         }
 
-        stage("OWASP Dependency Check") {
-    steps {
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-            dependencyCheck(
-                additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
-                odcInstallation: 'DP-Check'
-            )
-
-            dependencyCheckPublisher(
-                pattern: '**/dependency-check-report.xml'
-            )
-        }
-    }
-}
-
         stage("Trivy File Scan") {
-    steps {
-        sh "trivy fs . --skip-files dependency-check-report.xml > trivy.txt"
-    }
-}
+            steps {
+                sh "trivy fs . --skip-files dependency-check-report.xml > trivy.txt"
+            }
+        }
 
         stage("Build Docker Image") {
             steps {
@@ -75,33 +68,50 @@ pipeline {
             }
         }
 
-        stage("Tag & Push to DockerHub") {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'docker',
-            usernameVariable: 'DOCKER_USERNAME',
-            passwordVariable: 'DOCKER_PASSWORD'
-        )]) {
-            sh '''
-                echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                docker tag zomato prabhasrao/zomato:latest
-                docker push prabhasrao/zomato:latest
-                docker logout
-            '''
+        stage("Trivy Docker Image Scan") {
+            steps {
+                sh "trivy image zomato:latest > trivy-docker.txt"
+            }
         }
-    }
-}
-        stage("Deploy to Container") {
+        
+        stage("Trivy Terraform Scan") {
+            steps {
+                sh "trivy config . > trivy-terraform.txt"
+            }
+        }
+
+        stage("Tag & Push to DockerHub") {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker',
+                    usernameVariable: 'DOCKER_USERNAME',
+                    passwordVariable: 'DOCKER_PASSWORD'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        docker tag zomato prabhasrao/zomato:latest
+                        docker push prabhasrao/zomato:latest
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage("Deploy to EKS") {
             steps {
                 sh '''
-                    docker rm -f zomato || true
-                    docker run -d \
-                        --name zomato \
-                        -p 3000:3000 \
-                        prabhasrao/zomato:latest
+                    aws eks update-kubeconfig \
+                      --region ap-south-1 \
+                      --name zomato-eks
+
+                    kubectl apply -f deployment.yaml
+                    kubectl apply -f service.yaml
+
+                    kubectl rollout status deployment/zomato
+                    kubectl get pods
+                    kubectl get svc
                 '''
             }
         }
     }
 }
- 
