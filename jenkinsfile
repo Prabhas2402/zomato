@@ -101,7 +101,7 @@ pipeline {
     steps {
         sh '''
             aws ssm send-command \
-              --instance-ids i-0d65376fe4cce32c6 \
+              --instance-ids i-0cdc8ad45e237d13f \
               --document-name "AWS-RunShellScript" \
               --parameters 'commands=[
                 "docker pull prabhasrao/zomato:latest",
